@@ -124,3 +124,14 @@ class TestArticleOnly(unittest.TestCase):
         sample = load_sample("utf-8-kanji.sample.html")
         doc = Document(sample)
         res = doc.summary()
+
+    def test_nature(self):
+        """Using the si sample, make sure we can get the article alone."""
+        sample = load_sample("nature.html")
+        doc = Document(sample, url="https://www.nature.com/articles/s41467-021-25914-8")
+        res = doc.summary()
+
+        abstract_first_sentence = "There is conflicting evidence"
+        introduction_first_sentence = "Severe acute respiratory syndrome coronavirus 2"
+        self.assertIn(abstract_first_sentence, res)
+        self.assertIn(introduction_first_sentence, res)
