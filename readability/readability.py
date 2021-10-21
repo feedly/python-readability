@@ -381,8 +381,10 @@ class Document:
 
             # WTF? candidates[elem]['content_score'] += content_score
             candidates[parent_node]["content_score"] += content_score
+            candidates[parent_node]["audit_trail"].append(f"+{content_score} (child)")
             if grand_parent_node is not None:
                 candidates[grand_parent_node]["content_score"] += content_score / 2.0
+                candidates[grand_parent_node]["audit_trail"].append(f"+{content_score / 2.0} (grandchild)")
 
         # Scale the final candidates score based on link density. Good content
         # should have a relatively small link density (5% or less) and be
@@ -399,39 +401,55 @@ class Document:
 
         return candidates
 
-    def class_weight(self, e):
+    def class_weight_and_audit_trail(self, e):
+        audit_trail = []
         weight = 0
         for feature in [e.get("class", None), e.get("id", None)]:
             if feature:
                 if REGEXES["negativeRe"].search(feature):
                     weight -= 25
+                    audit_trail.append("-25: negativeRe")
 
                 if REGEXES["positiveRe"].search(feature):
                     weight += 25
+                    audit_trail.append("+25: positiveRe")
 
                 if self.positive_keywords and self.positive_keywords.search(feature):
                     weight += 25
+                    audit_trail.append("+25: positive_keywords")
 
                 if self.negative_keywords and self.negative_keywords.search(feature):
                     weight -= 25
+                    audit_trail.append("-25: negative_keywords")
 
         if self.positive_keywords and self.positive_keywords.match("tag-" + e.tag):
             weight += 25
+            audit_trail.append("+25: positive_keywords")
 
         if self.negative_keywords and self.negative_keywords.match("tag-" + e.tag):
             weight -= 25
+            audit_trail.append("-25: negative_keywords")
 
-        return weight
+        return weight, audit_trail
+
+    def class_weight(self, elem):
+        return self.class_weight_and_audit_trail(elem)[0]
 
     def score_node(self, elem):
-        content_score = self.class_weight(elem)
+        content_score, audit_trail = self.class_weight_and_audit_trail(elem)
         name = elem.tag.lower()
+        audit_trail.append(f"total class_weight = {content_score}")
         if name in ["div", "article"]:
             content_score += 5
+            audit_trail.append("+5 div/article")
         elif name in ["pre", "td", "blockquote"]:
             content_score += 3
+            audit_trail.append("+3 pre/td/blockquote")
+
         elif name in ["address", "ol", "ul", "dl", "dd", "dt", "li", "form", "aside"]:
             content_score -= 3
+            audit_trail.append("-3 address/ol/ul/dl/dd/dt/li/form/aside")
+
         elif name in [
             "h1",
             "h2",
@@ -445,7 +463,8 @@ class Document:
             "nav",
         ]:
             content_score -= 5
-        return {"content_score": content_score, "elem": elem}
+            audit_trail.append("-5 h")
+        return {"content_score": content_score, "elem": elem, "audit_trail": audit_trail}
 
     def remove_unlikely_candidates(self):
         for elem in self.html.findall(".//*"):
