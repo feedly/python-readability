@@ -352,11 +352,6 @@ class Document:
         candidates = {}
         ordered = []
         for elem in self.tags(self._html(), "p", "pre", "td"):
-            parent_node = elem.getparent()
-            if parent_node is None:
-                continue
-            grand_parent_node = parent_node.getparent()
-
             inner_text = clean(elem.text_content() or "")
             inner_text_len = len(inner_text)
 
@@ -365,14 +360,6 @@ class Document:
             if inner_text_len < MIN_LEN:
                 continue
 
-            if parent_node not in candidates:
-                candidates[parent_node] = self.score_node(parent_node)
-                ordered.append(parent_node)
-
-            if grand_parent_node is not None and grand_parent_node not in candidates:
-                candidates[grand_parent_node] = self.score_node(grand_parent_node)
-                ordered.append(grand_parent_node)
-
             content_score = 1
             content_score += len(inner_text.split(","))
             content_score += min((inner_text_len / 100), 3)
@@ -380,9 +367,16 @@ class Document:
             #    candidates[elem] = self.score_node(elem)
 
             # WTF? candidates[elem]['content_score'] += content_score
-            candidates[parent_node]["content_score"] += content_score
-            if grand_parent_node is not None:
-                candidates[grand_parent_node]["content_score"] += content_score / 2.0
+            p = elem.getparent()
+            depth = 1
+            while p is not None and depth <= 2:
+                if p not in candidates:
+                    candidates[p] = self.score_node(p)
+                    ordered.append(p)
+
+                candidates[p]["content_score"] += content_score / depth
+                p = p.getparent()
+                depth += 1
 
         # Scale the final candidates score based on link density. Good content
         # should have a relatively small link density (5% or less) and be
