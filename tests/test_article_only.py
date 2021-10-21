@@ -1,9 +1,9 @@
 import os
 import unittest
 
-from readability import Document
 import timeout_decorator
 
+from readability import Document
 
 SAMPLES = os.path.join(os.path.dirname(__file__), "samples")
 
@@ -124,3 +124,25 @@ class TestArticleOnly(unittest.TestCase):
         sample = load_sample("utf-8-kanji.sample.html")
         doc = Document(sample)
         res = doc.summary()
+
+    def test_audit_trail(self):
+        sample = load_sample("the-hurricane-rubin-carter-denzel-washington.html")
+        doc = Document(sample)
+
+        best_candidate = doc.select_best_candidate(doc.score_paragraphs())
+        self.assertListEqual(
+            [
+                "+25: positiveRe",
+                "total class_weight = 25",
+                "+5 div/article",
+                "+2.83 (child)",
+                "+9 (child)",
+                "+13 (child)",
+                "+10 (child)",
+                "+10 (child)",
+                "+9 (child)",
+                "+15 (child)",
+                "+2.65 (child)",
+            ],
+            best_candidate["audit_trail"],
+        )
