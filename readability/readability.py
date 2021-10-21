@@ -401,7 +401,7 @@ class Document:
 
     def class_weight(self, e):
         weight = 0
-        for feature in [e.get("class", None), e.get("id", None)]:
+        for feature in [e.get("class", None), e.get("id", None), e.get("data-post-url")]:
             if feature:
                 if REGEXES["negativeRe"].search(feature):
                     weight -= 25
@@ -414,6 +414,9 @@ class Document:
 
                 if self.negative_keywords and self.negative_keywords.search(feature):
                     weight -= 25
+
+                if self.url in feature:
+                    weight += 500
 
         if self.positive_keywords and self.positive_keywords.match("tag-" + e.tag):
             weight += 25

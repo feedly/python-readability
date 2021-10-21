@@ -124,3 +124,9 @@ class TestArticleOnly(unittest.TestCase):
         sample = load_sample("utf-8-kanji.sample.html")
         doc = Document(sample)
         res = doc.summary()
+
+    def test_spectrum_ieee(self):
+        sample = load_sample("spectrum.html")
+        doc = Document(sample, url="https://spectrum.ieee.org/event-based-camera-chips")
+        first_sentence = "The pixels in event-based cameras"
+        self.assertIn(first_sentence, doc.summary())
